@@ -1,0 +1,148 @@
+{
+	"info": {
+		"_postman_id": "626a9b03-b4a4-48f7-b507-e2a6bf69830b",
+		"name": "cars_warehouse",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "19817635"
+	},
+	"item": [
+		{
+			"name": "GET All Cars",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{URL}}api/v1/cars",
+					"host": [
+						"{{URL}}api"
+					],
+					"path": [
+						"v1",
+						"cars"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET  Car",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{URL}}api/v1/cars/:id",
+					"host": [
+						"{{URL}}api"
+					],
+					"path": [
+						"v1",
+						"cars",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "0cea8766-9cad-46a2-811c-77ef3c509fc9"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update  Car",
+			"request": {
+				"method": "PATCH",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"model\": \"TEST MODEL 1\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{URL}}api/v1/cars/:id",
+					"host": [
+						"{{URL}}api"
+					],
+					"path": [
+						"v1",
+						"cars",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "0cea8766-9cad-46a2-811c-77ef3c509fc9"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "DELETE  Car",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"model\": \"TEST MODEL 1\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{URL}}api/v1/cars/:id",
+					"host": [
+						"{{URL}}api"
+					],
+					"path": [
+						"v1",
+						"cars",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "46852cee-4273-4834-8d1d-aa21a83cdd04"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create New Car",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"model\": \"TEST MODEL 1                         \",\n    \"color\": \"RED\",\n    \"quantity\": 2 \n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{URL}}api/v1/cars",
+					"host": [
+						"{{URL}}api"
+					],
+					"path": [
+						"v1",
+						"cars"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
