@@ -84,7 +84,5 @@ exports.deleteCar = asyncHandler(async (req, res, next) => {
       msg: error.message,
     });
   }
-  res.status(200).json({
-    status: "success",
-  });
+  res.status(204).json({});
 });

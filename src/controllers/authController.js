@@ -1,8 +1,11 @@
-const appError = require("../utils/appError");
+const appError = require("../helpers/appError");
+const sendEmail = require("../helpers/email");
+const asyncHandler = require("express-async-handler");
 const { promisify } = require("util");
 const User = require("../models/userModel");
-const catchAsync = require("../utils/catchAsync");
 const JWT = require("jsonwebtoken");
+const AppError = require("../helpers/appError");
+const crypto = require("crypto");
 
 const signToken = (id) => {
   return JWT.sign({ id }, process.env.JWT_SECRET, {
@@ -10,12 +13,13 @@ const signToken = (id) => {
   });
 };
 
-exports.signup = catchAsync(async (req, res, next) => {
+exports.signup = asyncHandler(async (req, res, next) => {
   const user = await User.create({
     name: req.body.name,
     email: req.body.email,
     password: req.body.password,
-    confirmPassword: req.body.confirmPassword,
+    passwordConfirm: req.body.passwordConfirm,
+    passwordChangedAt: req.body.passwordChangedAt,
   });
 
   const token = signToken(user._id);
@@ -28,12 +32,11 @@ exports.signup = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.login = catchAsync(async (req, res, next) => {
+exports.login = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
   if (!email || !password)
     return next(new appError("Invalid email or password", 400));
   const user = await User.findOne({ email }).select("+password ");
-
   if (!user || !(await user.isCorrectPassword(password, user.password))) {
     return next(new appError("Invalid email or password", 401));
   }
@@ -44,10 +47,10 @@ exports.login = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.protect = catchAsync(async (req, res, next) => {
+exports.protect = asyncHandler(async (req, res, next) => {
   // check for the token existence
   let token;
-  if (req.headers.authorization?.startWith("Bearer")) {
+  if (req.headers.authorization?.startsWith("Bearer")) {
     token = req.headers.authorization.split(" ")[1];
   }
   if (!token) {
@@ -78,4 +81,82 @@ exports.protect = catchAsync(async (req, res, next) => {
   req.user = user;
   // if user pass all the previous validations, then user is authorized
   next();
+});
+
+exports.restrictTo = (...roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return next(
+        new appError("You dont have permission to perform this action", 403)
+      );
+    }
+    next();
+  };
+};
+
+exports.forgetPassword = asyncHandler(async (req, res, next) => {
+  const user = await User.findOne({ email: req.body.email });
+  if (!user) return next(new appError("this email address doesn't exist", 404));
+
+  // Create a reset password Token for the user
+  const passwordToken = user.resetPasswordToken();
+  await user.save({ validateBeforeSave: false });
+  const resetURL = `${req.protocol}://${req.get(
+    "host"
+  )}/api/v1/users/resetPassword/${passwordToken}`;
+  const message = "Use the URL provided to reset your password.\n " + resetURL;
+
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: "Reset Password",
+      message,
+    });
+    res.status(200).json({
+      status: "success",
+      message: "Reset password URL was sent to the user email address",
+    });
+  } catch (err) {
+    user.passwordResetToken = undefined;
+    user.passwordTokenExp = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    return next(
+      new AppError(
+        "unexpected error during password reset, please try again",
+        500
+      )
+    );
+  }
+});
+
+exports.resetPassword = asyncHandler(async (req, res, next) => {
+  // Check if the user token is valid
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(req.params.token)
+    .digest("hex");
+
+  // Get the user by using the token information
+  const user = await User.findOne({
+    passwordResetToken: hashedToken,
+    passwordTokenExp: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return next(new AppError("Token is not valid"), 400);
+  }
+
+  // update the password, delete pasword token, and send access token to the user
+  user.passwordResetToken = undefined;
+  user.passwordTokenExp = undefined;
+  user.password = req.body.password;
+  user.passwordConfirm = req.body.passwordConfirm;
+
+  await user.save();
+  const token = signToken(user._id);
+  res.status(200).json({
+    message: "success",
+    token,
+  });
 });
