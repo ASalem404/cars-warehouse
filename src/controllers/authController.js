@@ -12,6 +12,29 @@ const signToken = (id) => {
     expiresIn: process.env.JWT_EXPIRATION,
   });
 };
+const createSendToken = (user, statusCode, res) => {
+  const token = signToken(user._id);
+  const cookieOptions = {
+    expires: new Date(
+      Date.now() + process.env.JWT_COOKIE_EXPIRATION * 24 * 60 * 60 * 1000
+    ),
+    httpOnly: true,
+  };
+  if (process.env.NODE_ENV === "production") cookieOptions.secure = true;
+
+  res.cookie("jwt", token, cookieOptions);
+
+  // Remove password from output
+  user.password = undefined;
+
+  res.status(statusCode).json({
+    status: "success",
+    token,
+    data: {
+      user,
+    },
+  });
+};
 
 exports.signup = asyncHandler(async (req, res, next) => {
   const user = await User.create({
@@ -22,14 +45,7 @@ exports.signup = asyncHandler(async (req, res, next) => {
     passwordChangedAt: req.body.passwordChangedAt,
   });
 
-  const token = signToken(user._id);
-  res.status(201).json({
-    message: "User created successfully",
-    token,
-    data: {
-      user,
-    },
-  });
+  createSendToken(user, 201, res);
 });
 
 exports.login = asyncHandler(async (req, res, next) => {
@@ -40,11 +56,7 @@ exports.login = asyncHandler(async (req, res, next) => {
   if (!user || !(await user.isCorrectPassword(password, user.password))) {
     return next(new appError("Invalid email or password", 401));
   }
-  const token = signToken(user._id);
-  res.status(200).json({
-    message: "success",
-    token,
-  });
+  createSendToken(user, 200, res);
 });
 
 exports.protect = asyncHandler(async (req, res, next) => {
@@ -154,9 +166,18 @@ exports.resetPassword = asyncHandler(async (req, res, next) => {
   user.passwordConfirm = req.body.passwordConfirm;
 
   await user.save();
-  const token = signToken(user._id);
-  res.status(200).json({
-    message: "success",
-    token,
-  });
+  createSendToken(user, 200, res);
+});
+
+// update the current user password
+exports.updateUserPassword = asyncHandler(async (req, res, next) => {
+  const user = await User.findById(req.user.id).select("+password");
+  if (!user.isCorrectPassword(req.body.currentPassword, user.password))
+    return next(new AppError("Invalid password", 401));
+
+  user.password = req.body.password;
+  user.passwordConfirm = req.body.passwordConfirm;
+
+  await user.save();
+  createSendToken(user, 200, res);
 });

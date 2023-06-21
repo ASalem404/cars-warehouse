@@ -2,6 +2,13 @@ const asyncHandler = require("express-async-handler");
 const { validationResult } = require("express-validator");
 const User = require("../models/userModel");
 
+const filterObj = (obj, ...allowedFields) => {
+  const newObj = {};
+  Object.keys(obj).forEach((el) => {
+    if (allowedFields.includes(el)) newObj[el] = obj[el];
+  });
+  return newObj;
+};
 exports.getUsers = asyncHandler(async (req, res, next) => {
   const users = await User.find();
 
@@ -39,8 +46,11 @@ exports.createUser = asyncHandler(async (req, res, next) => {
   });
 });
 
-exports.updateUser = asyncHandler(async (req, res, next) => {
-  const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+exports.updateMe = asyncHandler(async (req, res, next) => {
+  if (req.body.password || req.body.passwordConfirm)
+    return next(new AppError("Invalid input", 400));
+  const updatedData = filterObj(req.body, "name", "email");
+  const user = await User.findByIdAndUpdate(req.params.id, updatedData, {
     new: true,
     runValidators: true,
   });
@@ -50,8 +60,11 @@ exports.updateUser = asyncHandler(async (req, res, next) => {
   });
 });
 
-exports.deleteUser = asyncHandler(async (req, res, next) => {
-  const user = await User.findByIdAndDelete(req.params.id);
+exports.deleteMe = asyncHandler(async (req, res, next) => {
+  await User.findByIdAndUpdate(req.user.id, { active: false });
 
-  res.status(204).json({});
+  res.status(204).json({
+    status: "success",
+    data: null,
+  });
 });
